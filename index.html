@@ -48,6 +48,15 @@ button{font:inherit;cursor:pointer;background:none;border:none;padding:0;color:i
 .keypoints{background:#f7f7f7;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:4px}
 .keypoints b{display:block;margin-bottom:4px}
 .keypoints li{margin-bottom:2px}
+.check{display:flex;gap:8px;margin-top:10px}
+.check-input{flex:1;min-width:0;border:1px solid #ddd;border-radius:10px;padding:8px 10px;font-size:15px;font-family:inherit;color:#111;outline:none}
+.check-input:focus{border-color:#111}
+.check-btn{flex:none;border:1px solid #ddd;border-radius:999px;padding:6px 14px;font-size:14px}
+.check-btn:active{background:#f2f2f2}
+.check-result{margin-top:10px;font-size:15px;line-height:1.9}
+.check-result .ok{color:#1a7f37}
+.check-result .bad{color:#d1242f}
+.check-result .score{font-size:13px;color:#888;margin-top:2px}
 audio{display:none}
 </style>
 </head>
@@ -83,6 +92,14 @@ function itemHTML(lesson, part, idx, title, sub, audioFile, sentences, keyPoints
     body += '<div class="keypoints"><b>Ý chính</b><ul>' +
       keyPoints.map(function(k){return '<li>' + esc(k) + '</li>';}).join('') + '</ul></div>';
   }
+  var check = '';
+  if(part === 'p1'){
+    var target = sentences[0].chars.filter(function(c){ return c.py; }).map(function(c){ return c.ch; }).join('');
+    check = '<div class="check" data-target="' + esc(target) + '">' +
+      '<input class="check-input" type="text" placeholder="Gõ lại câu này" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button class="check-btn">Kiểm tra</button></div>' +
+      '<div class="check-result"></div>';
+  }
   return '<div class="item" id="' + id + '">' +
     '<div class="item-title">' + esc(title) + (sub ? ' <small>' + esc(sub) + '</small>' : '') + '</div>' +
     '<audio preload="metadata" src="' + AUDIO_BASE + audioFile + '"></audio>' +
@@ -91,7 +108,7 @@ function itemHTML(lesson, part, idx, title, sub, audioFile, sentences, keyPoints
       '<div class="track"><div class="fill"></div></div>' +
       '<span class="time">0:00 / 0:00</span>' +
       '<button class="speed" data-speed="1">1×</button>' +
-    '</div>' +
+    '</div>' + check +
     '<button class="ans-row"><span>Đáp án</span><span class="chev">›</span></button>' +
     '<div class="answer"><div class="pills">' +
       '<button class="pill tg-py">Pinyin</button>' +
@@ -183,6 +200,35 @@ function wireItems(){
       speedBtn.setAttribute('data-speed', next);
       speedBtn.textContent = next + '×';
     });
+    var checkBox = item.querySelector('.check');
+    if(checkBox){
+      var input = checkBox.querySelector('.check-input');
+      var checkBtn = checkBox.querySelector('.check-btn');
+      var resultEl = item.querySelector('.check-result');
+      var target = checkBox.getAttribute('data-target');
+      function norm(s){ return s.replace(/[\s，。、！？；：""''.,!?;:·…—\-]/g, ''); }
+      function doCheck(){
+        var typed = norm(input.value);
+        if(!typed){ resultEl.innerHTML = ''; return; }
+        var correct = 0, out = '';
+        for(var i = 0; i < target.length; i++){
+          var cls = (typed[i] === target[i]) ? 'ok' : 'bad';
+          if(typed[i] === target[i]) correct++;
+          out += '<span class="' + cls + '">' + esc(target[i]) + '</span>';
+        }
+        var extra = typed.length > target.length ? typed.slice(target.length) : '';
+        var score = correct + '/' + target.length + ' chữ';
+        if(correct === target.length && typed.length === target.length){
+          resultEl.innerHTML = '<div class="ok">✓ Đúng hết</div><div>' + out + '</div>';
+        } else {
+          resultEl.innerHTML = '<div>' + out + (extra ? '<span class="bad">' + esc(extra) + '</span>' : '') + '</div>' +
+            '<div class="score">Đúng ' + score + ' — chữ đỏ là chữ chưa đúng</div>';
+        }
+      }
+      checkBtn.addEventListener('click', doCheck);
+      input.addEventListener('keydown', function(e){ if(e.key === 'Enter'){ e.preventDefault(); doCheck(); } });
+      input.addEventListener('input', function(){ resultEl.innerHTML = ''; });
+    }
     item.querySelector('.ans-row').addEventListener('click', function(){
       var ans = item.querySelector('.answer');
       var row = item.querySelector('.ans-row');
