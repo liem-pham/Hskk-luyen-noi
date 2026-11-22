@@ -100,17 +100,16 @@ function itemHTML(lesson, part, idx, title, sub, audioFile, sentences, keyPoints
     body += '<div class="keypoints"><b>Ý chính</b><ul>' +
       keyPoints.map(function(k){return '<li>' + esc(k) + '</li>';}).join('') + '</ul></div>';
   }
+  var pills = '<div class="pills">' +
+    '<button class="pill tg-py">Pinyin</button>' +
+    '<button class="pill tg-vi">Nghĩa</button></div>';
   var qa = '';
   if(questions && questions.length){
     var qaBody = questions.map(function(qq, qi){
       return '<div class="qa-item"><div class="sent"><div class="sent-zh"><span class="spk">' + (qi+1) + '.</span>' + rubyHTML(qq.q) + '</div><div class="sent-vi">' + esc(qq.q.vi) + '</div></div></div>';
     }).join('');
-    qa = '<button class="ans-row qa-row"><span>Câu hỏi</span><span class="chev">›</span></button><div class="qa-body">' + qaBody + '</div>';
+    qa = '<button class="ans-row qa-row"><span>Câu hỏi</span><span class="chev">›</span></button><div class="qa-body">' + pills + qaBody + '</div>';
   }
-  var pills = '<div class="pills">' +
-    '<button class="pill tg-py">Pinyin</button>' +
-    '<button class="pill tg-vi">Nghĩa</button></div>';
-  var hasQa = !!(questions && questions.length);
   var check = '';
   if(part === 'p1'){
     var target = sentences[0].chars.filter(function(c){ return c.py; }).map(function(c){ return c.ch; }).join('');
@@ -128,9 +127,9 @@ function itemHTML(lesson, part, idx, title, sub, audioFile, sentences, keyPoints
       '<span class="time">0:00 / 0:00</span>' +
       '<button class="speed" data-speed="1">1×</button>' +
     '</div>' + check +
-    (hasQa ? pills : '') + qa +
+    qa +
     '<button class="ans-row"><span>Nội dung</span><span class="chev">›</span></button>' +
-    '<div class="answer">' + (hasQa ? '' : pills) + body + '</div></div>';
+    '<div class="answer">' + pills + body + '</div></div>';
 }
 
 function renderHome(){
@@ -292,15 +291,17 @@ function wireItems(){
       });
     }
     item.querySelectorAll('.tg-py').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.target.classList.toggle('on');
-        item.classList.toggle('show-pinyin', e.target.classList.contains('on'));
+      btn.addEventListener('click', function(){
+        var on = !item.classList.contains('show-pinyin');
+        item.classList.toggle('show-pinyin', on);
+        item.querySelectorAll('.tg-py').forEach(function(b){ b.classList.toggle('on', on); });
       });
     });
     item.querySelectorAll('.tg-vi').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.target.classList.toggle('on');
-        item.classList.toggle('show-vi', e.target.classList.contains('on'));
+      btn.addEventListener('click', function(){
+        var on = !item.classList.contains('show-vi');
+        item.classList.toggle('show-vi', on);
+        item.querySelectorAll('.tg-vi').forEach(function(b){ b.classList.toggle('on', on); });
       });
     });
   });
