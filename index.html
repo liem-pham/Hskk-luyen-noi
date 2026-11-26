@@ -85,20 +85,28 @@ function ttsStop(){
   ttsBtn = null; ttsTexts = null;
   if(ttsTimer){ clearInterval(ttsTimer); ttsTimer = null; }
 }
-function ttsSpeak(texts, playBtn, rate){
-  if(!window.speechSynthesis) return;
+function ttsSpeak(texts, playBtn, rate, noteEl){
+  if(!window.speechSynthesis){
+    if(noteEl) noteEl.textContent = 'Trình duyệt không hỗ trợ giọng máy';
+    return;
+  }
   var start = function(){
     ttsTexts = texts; ttsBtn = playBtn; ttsSpeaking = true;
     playBtn.textContent = '❙❙';
+    if(noteEl) noteEl.textContent = 'Giọng máy';
     var u = new SpeechSynthesisUtterance(texts.join(' '));
     u.lang = 'zh-CN';
     u.rate = rate || 1;
     var vs = speechSynthesis.getVoices();
+    var hasZh = false;
     for(var i = 0; i < vs.length; i++){
-      if(vs[i].lang && vs[i].lang.toLowerCase().indexOf('zh') === 0){ u.voice = vs[i]; break; }
+      if(vs[i].lang && vs[i].lang.toLowerCase().indexOf('zh') === 0){ u.voice = vs[i]; hasZh = true; break; }
     }
     u.onend = function(){ ttsStop(); };
-    u.onerror = function(){ ttsStop(); };
+    u.onerror = function(e){
+      ttsStop();
+      if(noteEl) noteEl.textContent = 'Không đọc được' + (hasZh ? '' : ' — máy chưa có giọng tiếng Trung') + ((e && e.error) ? ' (' + e.error + ')' : '');
+    };
     speechSynthesis.speak(u);
     ttsTimer = setInterval(function(){
       if(ttsSpeaking){ speechSynthesis.resume(); }
@@ -270,10 +278,11 @@ function wireItems(){
     var ttsPlayer = item.querySelector('.player.tts');
     if(ttsPlayer){
       var texts = JSON.parse(decodeURIComponent(ttsPlayer.getAttribute('data-texts')));
+      var noteEl = ttsPlayer.querySelector('.tts-note');
       playBtn.addEventListener('click', function(){
         if(ttsSpeaking && ttsBtn === playBtn){ ttsStop(); return; }
         if(currentAudio) { currentAudio.pause(); if(currentPlayBtn) currentPlayBtn.textContent = '▶'; }
-        ttsSpeak(texts, playBtn, parseFloat(speedBtn.getAttribute('data-speed')));
+        ttsSpeak(texts, playBtn, parseFloat(speedBtn.getAttribute('data-speed')), noteEl);
       });
       speedBtn.addEventListener('click', function(){
         var speeds = [1, 1.25, 0.75];
@@ -281,7 +290,7 @@ function wireItems(){
         var next = speeds[(speeds.indexOf(cur)+1) % speeds.length];
         speedBtn.setAttribute('data-speed', next);
         speedBtn.textContent = next + '×';
-        if(ttsSpeaking && ttsBtn === playBtn){ ttsSpeak(texts, playBtn, next); }
+        if(ttsSpeaking && ttsBtn === playBtn){ ttsSpeak(texts, playBtn, next, noteEl); }
       });
     } else if(audio){
     var track = item.querySelector('.track');
