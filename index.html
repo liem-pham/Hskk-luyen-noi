@@ -77,34 +77,44 @@ var DATA = JSON.parse(document.getElementById('data').textContent);
 var AUDIO_BASE = "https://ewqcpwfwwamfzozosrmx.supabase.co/storage/v1/object/public/hskk-audio/";
 var app = document.getElementById('app');
 var currentAudio = null, currentPlayBtn = null;
-var ttsSpeaking = false, ttsTimer = null, ttsBtn = null, ttsQueue = [], ttsIndex = 0;
+var ttsSpeaking = false, ttsTimer = null, ttsBtn = null, ttsTexts = null;
 function ttsStop(){
   if(window.speechSynthesis){ speechSynthesis.cancel(); }
   ttsSpeaking = false;
   if(ttsBtn) ttsBtn.textContent = '▶';
-  ttsBtn = null;
-  if(ttsTimer){ clearTimeout(ttsTimer); ttsTimer = null; }
+  ttsBtn = null; ttsTexts = null;
+  if(ttsTimer){ clearInterval(ttsTimer); ttsTimer = null; }
 }
 function ttsSpeak(texts, playBtn, rate){
-  ttsStop();
   if(!window.speechSynthesis) return;
-  ttsQueue = texts; ttsIndex = 0; ttsBtn = playBtn; ttsSpeaking = true;
-  playBtn.textContent = '❙❙';
-  function next(){
-    if(!ttsSpeaking) return;
-    if(ttsIndex >= ttsQueue.length){ ttsStop(); return; }
-    var u = new SpeechSynthesisUtterance(ttsQueue[ttsIndex]);
+  var start = function(){
+    ttsTexts = texts; ttsBtn = playBtn; ttsSpeaking = true;
+    playBtn.textContent = '❙❙';
+    var u = new SpeechSynthesisUtterance(texts.join(' '));
     u.lang = 'zh-CN';
     u.rate = rate || 1;
     var vs = speechSynthesis.getVoices();
     for(var i = 0; i < vs.length; i++){
       if(vs[i].lang && vs[i].lang.toLowerCase().indexOf('zh') === 0){ u.voice = vs[i]; break; }
     }
-    u.onend = function(){ ttsIndex++; ttsTimer = setTimeout(next, 600); };
-    u.onerror = function(){ ttsIndex++; ttsTimer = setTimeout(next, 600); };
+    u.onend = function(){ ttsStop(); };
+    u.onerror = function(){ ttsStop(); };
     speechSynthesis.speak(u);
+    ttsTimer = setInterval(function(){
+      if(ttsSpeaking){ speechSynthesis.resume(); }
+      else { clearInterval(ttsTimer); ttsTimer = null; }
+    }, 10000);
+  };
+  if(ttsSpeaking || speechSynthesis.speaking){
+    ttsStop();
+    setTimeout(start, 150);
+  } else {
+    start();
   }
-  next();
+}
+if(window.speechSynthesis){
+  speechSynthesis.getVoices();
+  speechSynthesis.addEventListener('voiceschanged', function(){ speechSynthesis.getVoices(); });
 }
 
 function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
